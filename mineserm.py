@@ -1,4 +1,5 @@
 import os
+import random
 
 def clear():
 	if os.name == "nt":
@@ -41,14 +42,29 @@ def gameSel_Check(N,C): # Evaluar si la selección (fila o columna) está en el 
 def gameBoard_New(): # Genera el tablero visible para el jugador
 	Board = ["" for x in range(gameRows)]
 	for r in range(gameRows):
-			Board[r] = ["■" for x in range(gameColumns)] # ▣ ■ □
+			Board[r] = ["■" for x in range(gameColumns)] # ▣ ■ □ ⊠ 
 	return Board
 
-"""def gameMines_New(): # Genera la posición de las minas
-	minesBoard = ["" for x in range(gameRows)]
+def gameMines_New(): # Genera la posición de las minas
+	Mines = ["" for x in range(gameRows)]
 	for r in range(gameRows):
-			minesBoard[r] = [0 for x in range(gameColumns)]
-	return Board"""
+		Mines[r] = [0 for x in range(gameColumns)]
+	s = 0
+	while s < gameMines :
+		for r in range(gameRows):
+			if s < gameMines :
+				for i in range(gameColumns):
+					N = random.randint(0, 2)
+					if s == gameMines :
+						break
+					if Mines[r][i] != 1 :
+						if N == 1 :
+							Mines[r][i] = N
+							s = s + Mines[r][i]
+			else :
+				break
+
+	return Mines
 
 def gameBoard(): # Muestra el tablero con los números de fila y columna
 	if gameColumns >= 10 :
@@ -138,7 +154,7 @@ headMsg = f"BUSCAMINAS | Jugador: {playerName}\n\nTablero {gameRows}x{gameColumn
 ### INICIO DEL JUEGO
 
 Board = gameBoard_New()
-# Mines = gameMines_New()
+Mines = gameMines_New()
 
 onGame = True
 
@@ -164,7 +180,17 @@ while onGame == True : # Mostrar el tablero, seleccionar una casilla y modificar
 		gameBoard()
 		print(f"Fila: {selRow}\n")
 		print(f"\nERROR! Columna incorrecta (1-{gameColumns})\n")
-		selColumn = input("Fila --> ")
+		selColumn = input("Columna --> ")
 	selColumn = int(selColumn)
 
-	Board[selRow-1][selColumn-1] = "□"
+	if Mines[selRow-1][selColumn-1] == 0 :
+		Board[selRow-1][selColumn-1] = "□"
+	else :
+		for i in range(gameRows):
+			for c in range(gameColumns):
+				if Mines[i][c] == 1 :
+					Board[i][c] = "⊠"
+		head()
+		gameBoard()
+		print("\nJuego terminado.")
+		onGame = False
