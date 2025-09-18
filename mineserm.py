@@ -54,19 +54,19 @@ def gameMines_New(): # Genera la posición de las minas
 		for r in range(gameRows):
 			if s < gameMines :
 				for i in range(gameColumns):
-					N = random.randint(0, 2)
+					N = random.randint(0, 3)
 					if s == gameMines :
 						break
 					if Mines[r][i] != 1 :
 						if N == 1 :
 							Mines[r][i] = N
-							s = s + Mines[r][i]
+							s += 1
 			else :
 				break
 
 	return Mines
 
-def gameBoard(): # Muestra el tablero con los números de fila y columna
+def gameBoard(T): # Muestra el tablero con los números de fila y columna
 	if gameColumns >= 10 :
 		row = "  "
 		for c in range(gameColumns):
@@ -94,8 +94,57 @@ def gameBoard(): # Muestra el tablero con los números de fila y columna
 				row = f"{" "}{r}"
 
 			for c in range(gameColumns):
-				row = f"{row} {Board[y][c]}"
+				if T == 0 :
+					row = f"{row} {Board[y][c]}"
+				else :
+					row = f"{row} {Mines[y][c]}"
 		print(row)
+
+def gameCell_Check(R,C):
+	global T
+	T = T + 1
+	if T <= (gameRows*gameColumns): # El número de repeticiones no puede ser mayor al numero de casillas
+		minesAround = 0
+		for a in range(3) : # Cuenta las minas alrededor de la casilla seleccionada
+			y = R - a
+			if (gameRows-1) < y or y < 0 :
+				continue
+			else :
+				for b in range(3) :
+					x = C - b
+					if (gameColumns-1) < x or x < 0 :
+						continue
+					else :
+						if Mines[y][x] == 1 :
+							minesAround += 1
+		if minesAround > 0 : # Evalúa si hay minas y 
+			Board[R-1][C-1] = minesAround
+		else :
+			for a in range(3) :
+				y = R - a
+				if (gameRows-1) < y or y < 0 :
+					continue
+				else :
+					for b in range(3) :
+						x = C - b
+						if (gameColumns-1) < x or x < 0 :
+							continue
+						else :
+							if Mines[y][x] == 1 :
+								minesAround += 1
+							else :
+								if Board[y][x] == "■" :
+									Board[y][x] = "□"
+									# print(T) # imprime la cantidad de veces que se ha repetido la función
+									gameCell_Check((y+1), (x+1))
+								elif Board[y][x] == "□" :
+									continue
+								else :
+									break
+			Board[R-1][C-1] = "□"
+		return T
+	else :
+		return T
 
 ### INICIO, SOLICITUD y VALIDACIÓN DE DATOS
 
@@ -149,7 +198,7 @@ while minesCheck(gameMines) :
 
 gameMines = int(gameMines)
 
-headMsg = f"BUSCAMINAS | Jugador: {playerName}\n\nTablero {gameRows}x{gameColumns} | Minas: {gameMines}\n"
+headMsg = f"BUSCAMINAS | Jugador: {playerName}\n\nTablero {gameRows}x{gameColumns} | Minas Restantes: {gameMines}\nModo: Descubrir"
 
 ### INICIO DEL JUEGO
 
@@ -157,40 +206,55 @@ Board = gameBoard_New()
 Mines = gameMines_New()
 
 onGame = True
+selMode = True
 
 while onGame == True : # Mostrar el tablero, seleccionar una casilla y modificar el tablero
 	head()
-	gameBoard()
+	gameBoard(0)
 	print("")
+	# gameBoard(1) # Imprime el tablero de minas
+	# print("")
 
 	selRow = input("Fila --> ")
 	if selRow == "q" :
 		onGame = False
 		break
+	elif selRow == "m" :
+		if selMode == True :
+			selMode == False
+			headMsg = f"BUSCAMINAS | Jugador: {playerName}\n\nTablero {gameRows}x{gameColumns} | Minas Restantes: {gameMines}\nModo: Marcar"
+			continue
+		else :
+			selMode = True
+			headMsg = f"BUSCAMINAS | Jugador: {playerName}\n\nTablero {gameRows}x{gameColumns} | Minas Restantes: {gameMines}\nModo: Descubrir"
+			continue
+
 	while gameSel_Check(selRow,gameRows) :
 		head()
-		gameBoard()
+		gameBoard(0)
 		print(f"\nERROR! Fila incorrecta (1-{gameRows})\n")
 		selRow = input("Fila --> ")
 	selRow = int(selRow)
 
-	selColumn = input("Fila --> ")
+	selColumn = input("Columna --> ")
 	while gameSel_Check(selColumn,gameColumns) :
 		head()
-		gameBoard()
+		gameBoard(0)
 		print(f"Fila: {selRow}\n")
 		print(f"\nERROR! Columna incorrecta (1-{gameColumns})\n")
 		selColumn = input("Columna --> ")
 	selColumn = int(selColumn)
 
 	if Mines[selRow-1][selColumn-1] == 0 :
-		Board[selRow-1][selColumn-1] = "□"
+		T = 1
+		print(T)
+		gameCell_Check(selRow,selColumn)
 	else :
 		for i in range(gameRows):
 			for c in range(gameColumns):
 				if Mines[i][c] == 1 :
 					Board[i][c] = "⊠"
 		head()
-		gameBoard()
+		gameBoard(0)
 		print("\nJuego terminado.")
 		onGame = False
