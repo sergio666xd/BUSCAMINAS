@@ -1,5 +1,6 @@
 import os
 import random
+from time import sleep
 
 def clear():
 	if os.name == "nt":
@@ -46,6 +47,7 @@ def gameBoard_New(): # Genera el tablero visible para el jugador
 	return Board
 
 def gameMines_New(): # Genera la posición de las minas
+	global Mines
 	Mines = ["" for x in range(gameRows)]
 	for r in range(gameRows):
 		Mines[r] = [0 for x in range(gameColumns)]
@@ -55,6 +57,18 @@ def gameMines_New(): # Genera la posición de las minas
 			if s < gameMines :
 				for i in range(gameColumns):
 					N = random.randint(0, 3)
+					if s == int(gameMines/2) :
+						break
+					if Mines[r][i] != 1 :
+						if N == 1 :
+							Mines[r][i] = N
+							s += 1
+			else :
+				break
+		for r in range(gameRows-1, 1,-1):
+			if s < gameMines :
+				for i in range(gameColumns-1,1,-1):
+					N = random.randint(0, 3)
 					if s == gameMines :
 						break
 					if Mines[r][i] != 1 :
@@ -63,7 +77,7 @@ def gameMines_New(): # Genera la posición de las minas
 							s += 1
 			else :
 				break
-
+		
 	return Mines
 
 def gameBoard(T): # Muestra el tablero con los números de fila y columna
@@ -100,8 +114,19 @@ def gameBoard(T): # Muestra el tablero con los números de fila y columna
 					row = f"{row} {Mines[y][c]}"
 		print(row)
 
+def cellsChecked_Search(R,C):
+	for i in range(len(cellsChecked)):
+		if cellsChecked[i][0] == (R+1) and cellsChecked[i][1] == (C+1) :
+			return True
+	return False
+
 def gameCell_Check(R,C):
 	global T
+	global cellsChecked
+
+	if cellsChecked_Search((R-1),(C-1)) == False :
+		cellsChecked.append([R,C])
+	
 	T = T + 1
 	if T <= (gameRows*gameColumns): # El número de repeticiones no puede ser mayor al numero de casillas
 		minesAround = 0
@@ -138,10 +163,12 @@ def gameCell_Check(R,C):
 									# print(T) # imprime la cantidad de veces que se ha repetido la función
 									gameCell_Check((y+1), (x+1))
 								elif Board[y][x] == "□" :
-									continue
+									if cellsChecked_Search(y,x) == True :
+										continue
+									else :
+										gameCell_Check((y+1), (x+1))
 								else :
-									break
-			Board[R-1][C-1] = "□"
+									continue
 		return T
 	else :
 		return T
@@ -204,6 +231,7 @@ headMsg = f"BUSCAMINAS | Jugador: {playerName}\n\nTablero {gameRows}x{gameColumn
 
 Board = gameBoard_New()
 Mines = gameMines_New()
+cellsChecked = []
 
 onGame = True
 selMode = True
@@ -211,9 +239,10 @@ selMode = True
 while onGame == True : # Mostrar el tablero, seleccionar una casilla y modificar el tablero
 	head()
 	gameBoard(0)
+	""" print(cellsChecked)
 	print("")
-	# gameBoard(1) # Imprime el tablero de minas
-	# print("")
+	gameBoard(1) # Imprime el tablero de minas
+	print("") """
 
 	selRow = input("Fila --> ")
 	if selRow == "q" :
@@ -247,14 +276,14 @@ while onGame == True : # Mostrar el tablero, seleccionar una casilla y modificar
 
 	if Mines[selRow-1][selColumn-1] == 0 :
 		T = 1
-		print(T)
 		gameCell_Check(selRow,selColumn)
 	else :
 		for i in range(gameRows):
 			for c in range(gameColumns):
 				if Mines[i][c] == 1 :
 					Board[i][c] = "⊠"
-		head()
-		gameBoard(0)
+					head()
+					gameBoard(0)
+					sleep(0.4)
 		print("\nJuego terminado.")
 		onGame = False
