@@ -46,12 +46,24 @@ def gameBoard_New(): # Genera el tablero visible para el jugador
 			Board[r] = ["■" for x in range(gameColumns)] # ▣ ■ □ ⊠ 
 	return Board
 
-def gameMines_New(): # Genera la posición de las minas
+def gameMines_New(R,C): # Genera la posición de las minas
 	global Mines
 	Mines = ["" for x in range(gameRows)]
 	for r in range(gameRows):
 		Mines[r] = [0 for x in range(gameColumns)]
 	s = 0
+	Mines[R-1][C-1] = 2
+	for a in range(3):
+		y = R - a
+		if (gameRows-1) < y or y < 0 :
+			continue
+		else :
+			for b in range(3):
+				x = C - b
+				if (gameColumns-1) < x or x < 0 :
+					continue
+				else :
+					Mines[y][x] = 2
 	while s < gameMines :
 		for r in range(gameRows):
 			if s < gameMines :
@@ -59,7 +71,7 @@ def gameMines_New(): # Genera la posición de las minas
 					N = random.randint(0, 3)
 					if s == int(gameMines/2) :
 						break
-					if Mines[r][i] != 1 :
+					if Mines[r][i] == 0 :
 						if N == 1 :
 							Mines[r][i] = N
 							s += 1
@@ -71,13 +83,18 @@ def gameMines_New(): # Genera la posición de las minas
 					N = random.randint(0, 3)
 					if s == gameMines :
 						break
-					if Mines[r][i] != 1 :
+					if Mines[r][i] == 0 :
 						if N == 1 :
 							Mines[r][i] = N
 							s += 1
 			else :
 				break
-		
+	for r in range(gameRows):
+		for c in range(gameColumns):
+			if Mines[r][c] == 2 :
+				Mines[r][c] = 0
+			else :
+				continue
 	return Mines
 
 def gameBoard(T): # Muestra el tablero con los números de fila y columna
@@ -88,7 +105,7 @@ def gameBoard(T): # Muestra el tablero con los números de fila y columna
 			if y//10 != 0 :
 				row = f"{row} {y//10}"
 			else :
-				row = f"{row} {" "}"
+				row = f'{row} {" "}'
 		print(row)
 		
 	row = "  "
@@ -105,7 +122,7 @@ def gameBoard(T): # Muestra el tablero con los números de fila y columna
 			if r//10 != 0 :
 				row = f"{r}"
 			else :
-				row = f"{" "}{r}"
+				row = f'{" "}{r}'
 
 			for c in range(gameColumns):
 				if T == 0 :
@@ -173,6 +190,45 @@ def gameCell_Check(R,C):
 	else :
 		return T
 
+def cellSelector():
+	global onGame
+	global selMode
+	global selRow
+	global selColumn
+	global headMsg
+
+	selRow = input("\nFila o Modo --> ")
+	if selRow == "q" :
+		onGame = False
+		return 0
+	elif selRow == "m" :
+		if selMode == True :
+			selMode = False
+			headMsg = f"BUSCAMINAS | Jugador: {playerName}\n\nTablero {gameRows}x{gameColumns} | {countMines}\nModo: Marcar"
+			return 1
+		else :
+			selMode = True
+			headMsg = f"BUSCAMINAS | Jugador: {playerName}\n\nTablero {gameRows}x{gameColumns} | {countMines}\nModo: Descubrir"
+			return 1
+
+	while gameSel_Check(selRow,gameRows) :
+		head()
+		gameBoard(0)
+		print(f"\nERROR! Fila incorrecta (1-{gameRows})\n")
+		selRow = input("Fila --> ")
+	selRow = int(selRow)
+
+	selColumn = input("Columna --> ")
+	while gameSel_Check(selColumn,gameColumns) :
+		head()
+		gameBoard(0)
+		print(f"Fila: {selRow}\n")
+		print(f"\nERROR! Columna incorrecta (1-{gameColumns})\n")
+		selColumn = input("Columna --> ")
+	selColumn = int(selColumn)
+
+	return 2
+
 ### INICIO, SOLICITUD y VALIDACIÓN DE DATOS
 
 headMsg = "¡Bienvenido al Buscaminas!\n"
@@ -230,11 +286,24 @@ headMsg = f"BUSCAMINAS | Jugador: {playerName}\n\nTablero {gameRows}x{gameColumn
 ### INICIO DEL JUEGO
 
 Board = gameBoard_New()
-Mines = gameMines_New()
+
+head()
+gameBoard(0)
+
 cellsChecked = []
+countMines = gameMines
 
 onGame = True
 selMode = True
+
+gameStatus = cellSelector()
+
+Mines = gameMines_New(selRow,selColumn)
+print("")
+gameBoard(1) # Imprime el tablero de minas
+print("")
+T = 1
+gameCell_Check(selRow,selColumn)
 
 while onGame == True : # Mostrar el tablero, seleccionar una casilla y modificar el tablero
 	head()
@@ -243,47 +312,46 @@ while onGame == True : # Mostrar el tablero, seleccionar una casilla y modificar
 	print("")
 	gameBoard(1) # Imprime el tablero de minas
 	print("") """
+	
+	gameStatus = cellSelector()
 
-	selRow = input("Fila --> ")
-	if selRow == "q" :
-		onGame = False
-		break
-	elif selRow == "m" :
+	if gameStatus == 2 :
 		if selMode == True :
-			selMode == False
-			headMsg = f"BUSCAMINAS | Jugador: {playerName}\n\nTablero {gameRows}x{gameColumns} | Minas Restantes: {gameMines}\nModo: Marcar"
-			continue
+			if Mines[selRow-1][selColumn-1] == 0 :
+				T = 1
+				gameCell_Check(selRow,selColumn)
+			else :
+				Board[selRow-1][selColumn-1] = "⊠"
+				head()
+				gameBoard(0)
+				sleep(0.3)
+				for i in range(gameRows):
+					for c in range(gameColumns):
+						if Mines[i][c] == 1 :
+							Board[i][c] = "⊠"
+							head()
+							gameBoard(0)
+							sleep(0.3)
+				onGame = False
 		else :
-			selMode = True
-			headMsg = f"BUSCAMINAS | Jugador: {playerName}\n\nTablero {gameRows}x{gameColumns} | Minas Restantes: {gameMines}\nModo: Descubrir"
-			continue
+			if Board[selRow-1][selColumn-1] == "■" :
+				Board[selRow-1][selColumn-1] = "▣"
+				countMines -= 1
+				headMsg = f"BUSCAMINAS | Jugador: {playerName}\n\nTablero {gameRows}x{gameColumns} | {countMines}\nModo: Marcar"
+			elif Board[selRow-1][selColumn-1] == "▣" :
+				Board[selRow-1][selColumn-1] = "■"
+				countMines += 1
+				headMsg = f"BUSCAMINAS | Jugador: {playerName}\n\nTablero {gameRows}x{gameColumns} | {countMines}\nModo: Marcar"
+			else :
+				continue
+			if countMines == 0 :
+				checkMines = 0
+				for r in range(gameRows):
+					for c in range(gameColumns):
+						if Board[r][c] == "▣" and Mines[r][c] == 1 :
+							checkMines += 1
+				if checkMines == gameMines :
+					print("\n¡GANASTE!\n")
+					onGame = False
 
-	while gameSel_Check(selRow,gameRows) :
-		head()
-		gameBoard(0)
-		print(f"\nERROR! Fila incorrecta (1-{gameRows})\n")
-		selRow = input("Fila --> ")
-	selRow = int(selRow)
-
-	selColumn = input("Columna --> ")
-	while gameSel_Check(selColumn,gameColumns) :
-		head()
-		gameBoard(0)
-		print(f"Fila: {selRow}\n")
-		print(f"\nERROR! Columna incorrecta (1-{gameColumns})\n")
-		selColumn = input("Columna --> ")
-	selColumn = int(selColumn)
-
-	if Mines[selRow-1][selColumn-1] == 0 :
-		T = 1
-		gameCell_Check(selRow,selColumn)
-	else :
-		for i in range(gameRows):
-			for c in range(gameColumns):
-				if Mines[i][c] == 1 :
-					Board[i][c] = "⊠"
-					head()
-					gameBoard(0)
-					sleep(0.4)
-		print("\nJuego terminado.")
-		onGame = False
+print("\n--- Juego terminado ---")
