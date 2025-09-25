@@ -1,8 +1,17 @@
 import os
+import platform
+import subprocess
+import shutil
 import random
 from time import sleep
+import datetime
 
-def clear():
+try:
+	os.mkdir("saves") # Directorio para guardar los datos de los jugadores
+except FileExistsError:
+	print("Cargando Datos...")
+
+def clear(): # Despeja la consola
 	if os.name == "nt":
 		os.system("cls")
 	else:
@@ -11,6 +20,174 @@ def clear():
 def head(): # Encabezado
 	clear()
 	print(headMsg)
+
+def menu(): # Menú para mostrar los jugadores guardados, o crear uno
+	global saves
+	global headMsg
+
+	try:
+		os.mkdir("./saves")
+		print("Carpeta creada exitosamente.")
+	except FileExistsError:
+		print("Cargando Datos...")
+
+	saves = os.listdir('./saves')
+
+	headMsg = "¡Bienvenido al Buscaminas!\n"
+	head()
+
+	print("-- Jugadores --\n")
+	for i in range(len(saves)) :
+		print(f'{i+1} -> {saves[i]}')
+	print("\n0 -> Nuevo Jugador")
+	print("s -> Salir\n")
+
+	menuSel = input("Selecciona opción -->")
+	if menuSel == "s" :
+		print("\n--- Salida exitosa ---")
+		exit()
+	else :
+		try :
+			menuSel = int(menuSel)
+			check = True
+		except :
+			check = False
+
+		if check == True :
+			if 0 < menuSel <= len(saves) :
+				player(saves[menuSel-1])
+			elif menuSel == 0 :
+				newPlayer()
+			else :
+				menu()
+		else :
+			menu()
+
+def newPlayer(): # Crea un nuevo jugador
+	global headMsg
+	global playerName
+
+	head()
+
+	playerName = input("\nIngresa tu nombre --> ")
+
+	headMsg = f"Hola, {playerName}. {headMsg}"
+
+	while playerName == "" :
+		head()
+		print("ERROR! El nombre no puede estar vacío\n")
+
+		playerName = input("Ingresa tu nombre --> ")
+
+	if playerName in saves :
+		for i in range(len(saves)) :
+			if saves[i] == playerName:
+				p = i
+		player(saves[p])
+	else :
+		newDir = f'./saves/{playerName}'
+		os.mkdir(newDir)
+		print("Carpeta creada exitosamente.")
+		playerData_File = f'./saves/{playerName}/playerData.txt'
+		with open(playerData_File, 'w', encoding='utf-8') as playerData:
+			playerData.write("0\n")
+			playerData.write("0\n")
+			playerData.write("0")
+		
+		now = datetime.datetime.now()
+
+		with open(f'./saves/{playerName}/playerHistory.txt', 'w', encoding='utf-8') as playerHistory:
+			playerHistory.write(f'--- Historial de Partidas (Jugador: "{playerName}") ---\n')
+			playerHistory.write(f'Creado el {now.strftime("%d/%m/%Y a las %H:%M:%S")}\n')
+		player(playerName)
+
+def player(p): # Página del jugador
+	global playerName
+	global headMsg
+	global pID
+
+	playerName = p
+	for i in range(len(saves)) :
+		if saves[i] == playerName:
+			pID = i
+
+	playerData_File = f'./saves/{playerName}/playerData.txt'
+	try:
+		with open(playerData_File, 'r', encoding='utf-8') as playerData:
+			Data = playerData.readlines()
+			played = int(Data[0])
+			wins = int(Data[1])
+			defs = int(Data[2])
+	except:
+		with open(playerData_File, 'w', encoding='utf-8') as playerData:
+				playerData.write("0\n")
+				playerData.write("0\n")
+				playerData.write("0")
+		with open(playerData_File, 'r', encoding='utf-8') as playerData:
+			Data = playerData.readlines()
+			played = int(Data[0])
+			wins = int(Data[1])
+			defs = int(Data[2])
+
+
+	headMsg = f"Hola, {playerName}. ¡Bienvenido al Buscaminas!\n"
+
+	head()
+	print(f'Partidas jugadas: {played}')
+	print(f'Partidas ganadas: {wins}')
+	print(f'Partidas perdidas: {defs}')
+
+	print("\n-- Opciones --\n")
+	print("1 -> Nueva Partida")
+	print("2 -> Ver Historial")
+	print("s -> Volver al Menú\n")
+	print("0 -> Eliminar Jugador")
+
+	menuSel = input("\nSelecciona opción -->")
+	if menuSel == "s" :
+		menu()
+	else :
+		try :
+			menuSel = int(menuSel)
+			check = True
+		except :
+			check = False
+
+		if check == True :
+			if menuSel == 1 or menuSel == 2 :
+				if menuSel == 1 :
+					newGame()
+				else :
+					file_path =f'./saves/{playerName}/playerHistory.txt'
+					try :
+						if platform.system() == "Windows":
+							process = subprocess.run(["notepad.exe", file_path])
+						elif platform.system() == "Darwin": # macOS
+							process = subprocess.run(["open", file_path])
+						else: # Linux and other Unix-like systems
+							process = subprocess.run(["xdg-open", file_path])
+					except FileNotFoundError:
+						print(f"Error: No se encontró el archivo '{file_path}'.")
+					except subprocess.CalledProcessError:
+						print(f"Error al intentar abrir '{file_path}' con el Bloc de notas.")
+					player(saves[pID])
+			elif menuSel == 0 :
+				head()
+				check = input("¿Estás seguro que quieres eliminar el jugador? (S/n) --> ")
+				if check == "S" :
+					try:
+						playerDir = f'./saves/{playerName}'
+						shutil.rmtree(playerDir)
+						print(f"Directorio '{playerDir}' eliminado correctamente.")
+						menu()
+					except OSError as e:
+						print(f"Error al eliminar el directorio '{playerDir}': {e}")
+				else :
+					player(saves[pID])
+			else :
+				player(saves[pID])
+		else :
+			player(saves[pID])
 
 def NumTry(N): # Evaluar si es posible convertir el input srt en un int
 	try :
@@ -97,18 +274,22 @@ def gameMines_New(R,C): # Genera la posición de las minas
 				continue
 	return Mines
 
-def gameBoard(T): # Muestra el tablero con los números de fila y columna
+def gameBoard(T,H): # Muestra el tablero con los números de fila y columna
+	historyLines = []
 	if gameColumns >= 10 :
-		row = "  "
+		row = "    "
 		for c in range(gameColumns):
 			y = c + 1
 			if y//10 != 0 :
 				row = f"{row} {y//10}"
 			else :
 				row = f'{row} {" "}'
-		print(row)
+		if H == 0 :
+			print(row)
+		else :
+			historyLines.append(row)
 		
-	row = "  "
+	row = "    "
 
 	for r in range(gameRows+1):
 		if r == 0 :
@@ -117,27 +298,53 @@ def gameBoard(T): # Muestra el tablero con los números de fila y columna
 					row = f"{row} {(c+1)%10}"
 				else :
 					row = f"{row} {c+1}"
+			if H == 0 :
+				print(row)
+			else :
+				historyLines.append(row)
+			row = "    "
+			for c in range(gameColumns):
+				row = f"{row}--"
 		else :
 			y = r-1
 			if r//10 != 0 :
-				row = f"{r}"
+				row = f"{r} |"
 			else :
-				row = f'{" "}{r}'
+				row = f'{" "}{r} |'
 
 			for c in range(gameColumns):
 				if T == 0 :
-					row = f"{row} {Board[y][c]}"
+					if H == 0 :
+						value = Board[y][c]
+					else :
+						if Board[y][c] == "⊠" :
+							value = "X"
+						elif Board[y][c] == "■" :
+							value = "0"
+						elif Board[y][c] == "▣" :
+							value = "-"
+						elif Board[y][c] == "□" :
+							value = " "
+						else :
+							value = Board[y][c]
+					row = f"{row} {value}"
 				else :
 					row = f"{row} {Mines[y][c]}"
-		print(row)
+		if H == 0 :
+			print(row)
+		else :
+			historyLines.append(row)
 
-def cellsChecked_Search(R,C):
+	if H == 1 :
+		return historyLines
+
+def cellsChecked_Search(R,C): # Verifica si una casilla ya ha sido evaluada
 	for i in range(len(cellsChecked)):
 		if cellsChecked[i][0] == (R+1) and cellsChecked[i][1] == (C+1) :
 			return True
 	return False
 
-def gameCell_Check(R,C):
+def gameCell_Check(R,C): # Evalúa las casillas al rededor de la celda evaluada
 	global T
 	global cellsChecked
 
@@ -190,12 +397,13 @@ def gameCell_Check(R,C):
 	else :
 		return T
 
-def cellSelector():
+def cellSelector(): # Operador del juego (entrada)
 	global onGame
 	global selMode
 	global selRow
 	global selColumn
 	global headMsg
+	global countMines
 
 	selRow = input("\nFila o Modo --> ")
 	if selRow == "q" :
@@ -213,7 +421,7 @@ def cellSelector():
 
 	while gameSel_Check(selRow,gameRows) :
 		head()
-		gameBoard(0)
+		gameBoard(0,0)
 		print(f"\nERROR! Fila incorrecta (1-{gameRows})\n")
 		selRow = input("Fila --> ")
 	selRow = int(selRow)
@@ -221,7 +429,7 @@ def cellSelector():
 	selColumn = input("Columna --> ")
 	while gameSel_Check(selColumn,gameColumns) :
 		head()
-		gameBoard(0)
+		gameBoard(0,0)
 		print(f"Fila: {selRow}\n")
 		print(f"\nERROR! Columna incorrecta (1-{gameColumns})\n")
 		selColumn = input("Columna --> ")
@@ -229,129 +437,172 @@ def cellSelector():
 
 	return 2
 
-### INICIO, SOLICITUD y VALIDACIÓN DE DATOS
+def newGame(): # Inicia una nueva partida
+	global headMsg
+	global gameRows
+	global gameColumns
+	global gameMines
+	global playerName
 
-headMsg = "¡Bienvenido al Buscaminas!\n"
-
-head();
-playerName = input("Ingresa tu nombre --> ")
-
-headMsg = f"Hola, {playerName}. {headMsg}"
-
-while playerName == "" :
 	head()
-	print("ERROR! El nombre no puede estar vacío\n")
+	gameRows = input("Ingresa número de filas --> ")
 
-	playerName = input("Ingresa tu nombre --> ")
+	while NumTry(gameRows) :
+		head()
+		print("ERROR! El número de filas debe ser un número entero mayor que cero\n")
 
-head()
-gameRows = input("Ingresa número de filas --> ")
+		gameRows = int(input("Ingresa número de filas --> "))
 
-while NumTry(gameRows) :
-	head()
-	print("ERROR! El número de filas debe ser un número entero mayor que cero\n")
+	gameRows = int(gameRows)
 
-	gameRows = int(input("Ingresa número de filas --> "))
-
-gameRows = int(gameRows)
-
-head()
-print(f"Número de filas ingresado: {gameRows}\n")
-gameColumns = int(input("Ingresa número de columnas --> "))
-
-while NumTry(gameColumns) :
 	head()
 	print(f"Número de filas ingresado: {gameRows}\n")
-	print("ERROR! El número de columnas debe ser un número entero mayor que cero\n")
+	gameColumns = int(input("Ingresa número de columnas --> "))
 
-	gameColumns = input("Ingresa número de columnas --> ")
+	while NumTry(gameColumns) :
+		head()
+		print(f"Número de filas ingresado: {gameRows}\n")
+		print("ERROR! El número de columnas debe ser un número entero mayor que cero\n")
 
-gameColumns = int(gameColumns)
+		gameColumns = input("Ingresa número de columnas --> ")
 
-head()
-print(f"Número de filas ingresado: {gameRows} | Número de columnas ingresado: {gameColumns}\n")
-gameMines = input("Ingresa número de Minas --> ")
+	gameColumns = int(gameColumns)
 
-while minesCheck(gameMines) :
 	head()
-	print(f"Número de filas ingresado: {gameRows}\n")
-	print("ERROR! El número de minas debe ser un número entero mayor que cero\n")
-
+	print(f"Número de filas ingresado: {gameRows} | Número de columnas ingresado: {gameColumns}\n")
 	gameMines = input("Ingresa número de Minas --> ")
 
-gameMines = int(gameMines)
+	while minesCheck(gameMines) :
+		head()
+		print(f"Número de filas ingresado: {gameRows}\n")
+		print("ERROR! El número de minas debe ser un número entero mayor que cero\n")
 
-headMsg = f"BUSCAMINAS | Jugador: {playerName}\n\nTablero {gameRows}x{gameColumns} | Minas Restantes: {gameMines}\nModo: Descubrir"
+		gameMines = input("Ingresa número de Minas --> ")
 
-### INICIO DEL JUEGO
+	gameMines = int(gameMines)
 
-Board = gameBoard_New()
+	headMsg = f"BUSCAMINAS | Jugador: {playerName}\n\nTablero {gameRows}x{gameColumns} | Minas Restantes: {gameMines}\nModo: Descubrir"
 
-head()
-gameBoard(0)
+	### INICIO DEL JUEGO
 
-cellsChecked = []
-countMines = gameMines
+	game()
 
-onGame = True
-selMode = True
+def game():
+	global cellsChecked
+	global Board
+	global headMsg
+	global gameMines
+	global selMode
+	global T
+	global countMines
+	global startTime
 
-gameStatus = cellSelector()
+	Board = gameBoard_New()
 
-Mines = gameMines_New(selRow,selColumn)
-print("")
-gameBoard(1) # Imprime el tablero de minas
-print("")
-T = 1
-gameCell_Check(selRow,selColumn)
-
-while onGame == True : # Mostrar el tablero, seleccionar una casilla y modificar el tablero
 	head()
-	gameBoard(0)
-	""" print(cellsChecked)
-	print("")
-	gameBoard(1) # Imprime el tablero de minas
-	print("") """
-	
+	gameBoard(0,0)
+
+	cellsChecked = []
+	countMines = gameMines
+
+	onGame = True
+	selMode = True
+
 	gameStatus = cellSelector()
 
-	if gameStatus == 2 :
-		if selMode == True :
-			if Mines[selRow-1][selColumn-1] == 0 :
-				T = 1
-				gameCell_Check(selRow,selColumn)
-			else :
-				Board[selRow-1][selColumn-1] = "⊠"
-				head()
-				gameBoard(0)
-				sleep(0.3)
-				for i in range(gameRows):
-					for c in range(gameColumns):
-						if Mines[i][c] == 1 :
-							Board[i][c] = "⊠"
-							head()
-							gameBoard(0)
-							sleep(0.3)
-				onGame = False
-		else :
-			if Board[selRow-1][selColumn-1] == "■" :
-				Board[selRow-1][selColumn-1] = "▣"
-				countMines -= 1
-				headMsg = f"BUSCAMINAS | Jugador: {playerName}\n\nTablero {gameRows}x{gameColumns} | {countMines}\nModo: Marcar"
-			elif Board[selRow-1][selColumn-1] == "▣" :
-				Board[selRow-1][selColumn-1] = "■"
-				countMines += 1
-				headMsg = f"BUSCAMINAS | Jugador: {playerName}\n\nTablero {gameRows}x{gameColumns} | {countMines}\nModo: Marcar"
-			else :
-				continue
-			if countMines == 0 :
-				checkMines = 0
-				for r in range(gameRows):
-					for c in range(gameColumns):
-						if Board[r][c] == "▣" and Mines[r][c] == 1 :
-							checkMines += 1
-				if checkMines == gameMines :
-					print("\n¡GANASTE!\n")
-					onGame = False
+	Mines = gameMines_New(selRow,selColumn)
+	T = 1
+	gameCell_Check(selRow,selColumn)
 
-print("\n--- Juego terminado ---")
+	startTime = datetime.datetime.now()
+
+	while onGame == True : # Mostrar el tablero, seleccionar una casilla y modificar el tablero
+		head()
+		gameBoard(0,0)
+		""" print(cellsChecked)
+		print("")
+		gameBoard(1,0) # Imprime el tablero de minas
+		print("") """
+		
+		gameStatus = cellSelector()
+
+		if gameStatus == 2 :
+			if selMode == True :
+				if Mines[selRow-1][selColumn-1] == 0 :
+					T = 1
+					gameCell_Check(selRow,selColumn)
+				else :
+					Board[selRow-1][selColumn-1] = "⊠"
+					head()
+					gameBoard(0,0)
+					sleep(0.3)
+					for i in range(gameRows):
+						for c in range(gameColumns):
+							if Mines[i][c] == 1 and Board[i][c] == "■" :
+								Board[i][c] = "⊠"
+								head()
+								gameBoard(0,0)
+								sleep(0.3)
+							elif Mines[i][c] == 0 and Board[i][c] == "▣" :
+								Board[i][c] = "⊠"
+								head()
+								gameBoard(0,0) 
+								sleep(0.3)
+					print("\nPERDISTE :(\n")
+					historyNew()
+					newScore("d")
+					onGame = False
+			else :
+				if Board[selRow-1][selColumn-1] == "■" :
+					Board[selRow-1][selColumn-1] = "▣"
+					countMines -= 1
+					headMsg = f"BUSCAMINAS | Jugador: {playerName}\n\nTablero {gameRows}x{gameColumns} | {countMines}\nModo: Marcar"
+				elif Board[selRow-1][selColumn-1] == "▣" :
+					Board[selRow-1][selColumn-1] = "■"
+					countMines += 1
+					headMsg = f"BUSCAMINAS | Jugador: {playerName}\n\nTablero {gameRows}x{gameColumns} | {countMines}\nModo: Marcar"
+				else :
+					continue
+				if countMines == 0 :
+					checkMines = 0
+					for r in range(gameRows):
+						for c in range(gameColumns):
+							if Board[r][c] == "▣" and Mines[r][c] == 1 :
+								checkMines += 1
+					if checkMines == gameMines :
+						print("\n¡GANASTE!\n")
+						historyNew()
+						newScore("w")
+						onGame = False
+	print("Guardando Datos...")
+	sleep(5)
+	player(saves[pID])
+
+def	historyNew(): # Añade el trablero final al archivo playerHistory.txt
+	now = datetime.datetime.now()
+	lines = gameBoard(0,1)
+	with open(f'./saves/{playerName}/playerHistory.txt', 'a', encoding='utf-8') as playerHistory:
+		playerHistory.write(f"\n-------------------------------\n")
+		playerHistory.write(f'\n-- Partida Iniciada el {startTime.strftime("%d/%m/%Y a las %H:%M:%S")} --\n')
+		playerHistory.write(f"\nTablero: {gameRows}x{gameColumns} | Minas: {gameMines}\n\n")
+		for line in lines :
+			playerHistory.write(f"{line}\n")
+		playerHistory.write(f'\n-- Partida Finalizada el {now.strftime("%d/%m/%Y a las %H:%M:%S")} --\n')
+
+def newScore(s): # Actualiza la puntuación en playerData.txt
+	playerData_File = f'./saves/{playerName}/playerData.txt'
+	with open(playerData_File, 'r', encoding='utf-8') as playerData:
+		Data = playerData.readlines()
+		played = int(Data[0]) + 1
+		wins = int(Data[1])
+		defs = int(Data[2])
+	with open(playerData_File, 'w', encoding='utf-8') as playerData:
+		if s == "d" :
+			defs += 1
+		else :
+			wins += 1
+		playerData.write(f"{played}\n")
+		playerData.write(f"{wins}\n")
+		playerData.write(f"{defs}")
+
+menu()
