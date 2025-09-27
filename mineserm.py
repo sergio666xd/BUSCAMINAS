@@ -218,63 +218,34 @@ def gameSel_Check(N,C): # Evaluar si la selección (fila o columna) está en el 
 		return True
 
 def gameBoard_New(): # Genera el tablero visible para el jugador
-	Board = ["" for x in range(gameRows)]
-	for r in range(gameRows):
-			Board[r] = ["■" for x in range(gameColumns)] # ▣ ■ □ ⊠ 
+	Board = [["■" for c in range(gameColumns)] for r in range(gameRows)]
 	return Board
 
-def gameMines_New(R,C): # Genera la posición de las minas
-	global Mines
-	Mines = ["" for x in range(gameRows)]
-	for r in range(gameRows):
-		Mines[r] = [0 for x in range(gameColumns)]
-	s = 0
-	Mines[R-1][C-1] = 2
-	for a in range(3):
-		y = R - a
-		if (gameRows-1) < y or y < 0 :
-			continue
-		else :
-			for b in range(3):
-				x = C - b
-				if (gameColumns-1) < x or x < 0 :
-					continue
-				else :
-					Mines[y][x] = 2
-	while s < gameMines :
-		for r in range(gameRows):
-			if s < gameMines :
-				for i in range(gameColumns):
-					N = random.randint(0, 3)
-					if s == int(gameMines/2) :
-						break
-					if Mines[r][i] == 0 :
-						if N == 1 :
-							Mines[r][i] = N
-							s += 1
-			else :
-				break
-		for r in range(gameRows-1, 1,-1):
-			if s < gameMines :
-				for i in range(gameColumns-1,1,-1):
-					N = random.randint(0, 3)
-					if s == gameMines :
-						break
-					if Mines[r][i] == 0 :
-						if N == 1 :
-							Mines[r][i] = N
-							s += 1
-			else :
-				break
-	for r in range(gameRows):
-		for c in range(gameColumns):
-			if Mines[r][c] == 2 :
-				Mines[r][c] = 0
-			else :
-				continue
-	return Mines
+def gameMines_New(R, C):
+	# Guarda el área protegida
+    protected = set()
+    for r in range(-1, 2):
+        for c in range(-1, 2):
+            pr, pc = R - 1 + r, C - 1 + c
+            if 0 <= pr < gameRows and 0 <= pc < gameColumns:
+                protected.add((pr, pc))
+
+    # Generar posibles pocisiones, excluyendo en área protegida
+    positions = [(r, c) for r in range(gameRows) for c in range(gameColumns)
+                     if (r, c) not in protected]
+
+    # Elige aleatoriamente las posiciones para colocar las minas
+    minePositions = random.sample(positions, min(gameMines, len(positions)))
+
+    # Genera el tablero de minas
+    Mines = [[0 for c in range(gameColumns)] for r in range(gameRows)]
+    for r, c in minePositions:
+        Mines[r][c] = 1
+
+    return Mines
 
 def gameBoard(T,H): # Muestra el tablero con los números de fila y columna
+	print("")
 	historyLines = []
 	if gameColumns >= 10 :
 		row = "    "
@@ -405,7 +376,8 @@ def cellSelector(): # Operador del juego (entrada)
 	global headMsg
 	global countMines
 
-	selRow = input("\nFila o Modo --> ")
+	print("\nOpciones: m = Cambiar modo | q = Salir")
+	selRow = input("Opción o Fila --> ")
 	if selRow == "q" :
 		onGame = False
 		return 0
@@ -496,6 +468,10 @@ def game():
 	global T
 	global countMines
 	global startTime
+	global pID
+	global Mines
+	global onGame
+	global playerName
 
 	Board = gameBoard_New()
 
@@ -519,10 +495,12 @@ def game():
 	while onGame == True : # Mostrar el tablero, seleccionar una casilla y modificar el tablero
 		head()
 		gameBoard(0,0)
-		""" print(cellsChecked)
-		print("")
-		gameBoard(1,0) # Imprime el tablero de minas
-		print("") """
+		if playerName == "admin" :
+			print("")
+			print(cellsChecked)
+			print("")
+			gameBoard(1,0) # Imprime el tablero de minas
+			print("") 
 		
 		gameStatus = cellSelector()
 
@@ -549,8 +527,8 @@ def game():
 								gameBoard(0,0) 
 								sleep(0.3)
 					print("\nPERDISTE :(\n")
-					historyNew()
 					newScore("d")
+					historyNew()
 					onGame = False
 			else :
 				if Board[selRow-1][selColumn-1] == "■" :
@@ -571,18 +549,21 @@ def game():
 								checkMines += 1
 					if checkMines == gameMines :
 						print("\n¡GANASTE!\n")
-						historyNew()
 						newScore("w")
+						historyNew()
 						onGame = False
 	print("Guardando Datos...")
-	sleep(5)
+	sleep(3)
 	player(saves[pID])
 
 def	historyNew(): # Añade el trablero final al archivo playerHistory.txt
+	global played
+
 	now = datetime.datetime.now()
 	lines = gameBoard(0,1)
 	with open(f'./saves/{playerName}/playerHistory.txt', 'a', encoding='utf-8') as playerHistory:
-		playerHistory.write(f"\n-------------------------------\n")
+		playerHistory.write(f"\n-----------------------------------------------------\n")
+		playerHistory.write(f"\n--- Partida N°{played} ---\n")
 		playerHistory.write(f'\n-- Partida Iniciada el {startTime.strftime("%d/%m/%Y a las %H:%M:%S")} --\n')
 		playerHistory.write(f"\nTablero: {gameRows}x{gameColumns} | Minas: {gameMines}\n\n")
 		for line in lines :
@@ -590,6 +571,7 @@ def	historyNew(): # Añade el trablero final al archivo playerHistory.txt
 		playerHistory.write(f'\n-- Partida Finalizada el {now.strftime("%d/%m/%Y a las %H:%M:%S")} --\n')
 
 def newScore(s): # Actualiza la puntuación en playerData.txt
+	global played
 	playerData_File = f'./saves/{playerName}/playerData.txt'
 	with open(playerData_File, 'r', encoding='utf-8') as playerData:
 		Data = playerData.readlines()
