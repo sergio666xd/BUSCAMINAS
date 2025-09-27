@@ -375,21 +375,25 @@ def cellSelector(): # Operador del juego (entrada)
 	global selColumn
 	global headMsg
 	global countMines
+	global gameStatus
 
-	print("\nOpciones: m = Cambiar modo | q = Salir")
-	selRow = input("Opción o Fila --> ")
-	if selRow == "q" :
-		onGame = False
-		return 0
-	elif selRow == "m" :
-		if selMode == True :
-			selMode = False
-			headMsg = f"BUSCAMINAS | Jugador: {playerName}\n\nTablero {gameRows}x{gameColumns} | {countMines}\nModo: Marcar"
-			return 1
-		else :
-			selMode = True
-			headMsg = f"BUSCAMINAS | Jugador: {playerName}\n\nTablero {gameRows}x{gameColumns} | {countMines}\nModo: Descubrir"
-			return 1
+	if gameStatus == 3 :
+		selRow = input("\nFila --> ")
+	else:
+		print("\nOpciones: m = Cambiar modo | q = Salir")
+		selRow = input("Opción o Fila --> ")
+		if selRow == "q" :
+			onGame = False
+			return 0
+		elif selRow == "m" :
+			if selMode == True :
+				selMode = False
+				headMsg = f"BUSCAMINAS | Jugador: {playerName}\n\nTablero {gameRows}x{gameColumns} | {countMines}\nModo: Marcar"
+				return 1
+			else :
+				selMode = True
+				headMsg = f"BUSCAMINAS | Jugador: {playerName}\n\nTablero {gameRows}x{gameColumns} | {countMines}\nModo: Descubrir"
+				return 1
 
 	while gameSel_Check(selRow,gameRows) :
 		head()
@@ -402,7 +406,7 @@ def cellSelector(): # Operador del juego (entrada)
 	while gameSel_Check(selColumn,gameColumns) :
 		head()
 		gameBoard(0,0)
-		print(f"Fila: {selRow}\n")
+		print(f"\nFila: {selRow}")
 		print(f"\nERROR! Columna incorrecta (1-{gameColumns})\n")
 		selColumn = input("Columna --> ")
 	selColumn = int(selColumn)
@@ -472,6 +476,7 @@ def game():
 	global Mines
 	global onGame
 	global playerName
+	global gameStatus
 
 	Board = gameBoard_New()
 
@@ -484,6 +489,7 @@ def game():
 	onGame = True
 	selMode = True
 
+	gameStatus = 3
 	gameStatus = cellSelector()
 
 	Mines = gameMines_New(selRow,selColumn)
@@ -491,6 +497,8 @@ def game():
 	gameCell_Check(selRow,selColumn)
 
 	startTime = datetime.datetime.now()
+
+	finishMsg = "\n-- Saliendo --\n"
 
 	while onGame == True : # Mostrar el tablero, seleccionar una casilla y modificar el tablero
 		head()
@@ -526,7 +534,8 @@ def game():
 								head()
 								gameBoard(0,0) 
 								sleep(0.3)
-					print("\nPERDISTE :(\n")
+					finishMsg = "\nPERDISTE :(\n"
+					print(finishMsg)
 					newScore("d")
 					historyNew()
 					onGame = False
@@ -548,10 +557,20 @@ def game():
 							if Board[r][c] == "▣" and Mines[r][c] == 1 :
 								checkMines += 1
 					if checkMines == gameMines :
-						print("\n¡GANASTE!\n")
+						finishMsg = "\n¡GANASTE!\n"
+						print(finishMsg)
 						newScore("w")
 						historyNew()
 						onGame = False
+	head()
+	gameBoard(0,0)
+	if playerName == "admin" :
+		print("")
+		print(cellsChecked)
+		print("")
+		gameBoard(1,0) # Imprime el tablero de minas
+		print("")
+	print(finishMsg)
 	print("Guardando Datos...")
 	sleep(3)
 	player(saves[pID])
