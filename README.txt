@@ -2,7 +2,7 @@ BUSCAMINAS - Juego Interactivo en Terminal
 ==========================================
 
 Autor: Sergio Muñoz Marín
-Semestre: 2025-2
+Semestre: 2025-2 | Universidad Nacional de Colombia, Sede Medellín
 
 Repositorio Github:
 https://github.com/sergio666xd/BUSCAMINAS
