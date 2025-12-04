@@ -4,26 +4,18 @@ import platform
 import subprocess
 import shutil
 from time import sleep
-
-# Variables globales del módulo
-headMsg = ""
-players = []
-playerName = ""
-savedGamesDir = ""
+from . import globals
+from .utils import head
 
 def menu():
 	"""Menú principal: muestra jugadores guardados o permite crear uno nuevo"""
-	global players, headMsg
-	from .utils import head
-
-	players = os.listdir('./Game/players')
-
-	headMsg = "¡Bienvenido al Buscaminas!\n"
+	globals.players = os.listdir('./Game/players')
+	globals.headMsg = "¡Bienvenido al Buscaminas!\n"
 	head()
 
 	print("-- Jugadores --\n")
-	for i in range(len(players)):
-		print(f'{i+1} -> {players[i]}')
+	for i in range(len(globals.players)):
+		print(f'{i+1} -> {globals.players[i]}')
 	print("\n0 -> Nuevo Jugador")
 	print("s -> Salir\n")
 
@@ -39,8 +31,8 @@ def menu():
 			check = False
 
 		if check == True:
-			if 0 < menuSel <= len(players):
-				player_menu(players[menuSel-1])
+			if 0 < menuSel <= len(globals.players):
+				player_menu(globals.players[menuSel-1])
 			elif menuSel == 0:
 				newPlayer()
 			else:
@@ -50,25 +42,22 @@ def menu():
 
 def newPlayer():
 	"""Crea un nuevo jugador y su carpeta de guardado"""
-	global headMsg, playerName, players
-	from .utils import head
-
+	globals.headMsg = "¡Bienvenido al Buscaminas!\n"
 	head()
 
 	playerName = input("\nIngresa tu nombre --> ")
-
-	headMsg = f"Hola, {playerName}. ¡Bienvenido al Buscaminas!\n"
+	globals.headMsg = f"Hola, {playerName}. ¡Bienvenido al Buscaminas!\n"
 
 	while playerName == "":
 		head()
 		print("ERROR! El nombre no puede estar vacío\n")
 		playerName = input("Ingresa tu nombre --> ")
 
-	if playerName in players:
-		for i in range(len(players)):
-			if players[i] == playerName:
+	if playerName in globals.players:
+		for i in range(len(globals.players)):
+			if globals.players[i] == playerName:
 				p = i
-		player_menu(players[p])
+		player_menu(globals.players[p])
 	else:
 		newDir = f'./Game/players/{playerName}'
 		os.mkdir(newDir)
@@ -88,27 +77,24 @@ def newPlayer():
 
 def savedGames():
 	"""Muestra las partidas guardadas del jugador y permite cargar una"""
-	global headMsg, playerName, savedGamesDir
-	from .utils import head
 	from .save import loadGame
 
-	headMsg = f"BUSCAMINAS | Jugador: {playerName}\n\n-- Partidas Guardadas --\n"
-
+	globals.headMsg = f"BUSCAMINAS | Jugador: {globals.playerName}\n\n-- Partidas Guardadas --\n"
 	head()
 
-	savedGamesDir = f'./Game/players/{playerName}/savedGames'
+	globals.savedGamesDir = f'./Game/players/{globals.playerName}/savedGames'
 	try:
-		os.mkdir(savedGamesDir)
+		os.mkdir(globals.savedGamesDir)
 	except FileExistsError:
 		pass
 
-	savedGamesList = os.listdir(savedGamesDir)
+	savedGamesList = os.listdir(globals.savedGamesDir)
 
 	if savedGamesList == []:
 		print("No hay partidas guardadas.\n")
 		print("\nVolviendo al Menú de Jugador...")
 		sleep(2)
-		player_menu(playerName)
+		player_menu(globals.playerName)
 	else:
 		try:
 			savedGamesList.sort(key=lambda x: datetime.datetime.strptime(x.split('_')[1] + ' ' + x.split('_')[2], '%d-%m-%Y %H-%M-%S'))
@@ -121,16 +107,20 @@ def savedGames():
 				date_str = savedGamesList[i].split('_')[1]
 				time_str = savedGamesList[i].split('_')[2]
 				dt = datetime.datetime.strptime(date_str + ' ' + time_str, '%d-%m-%Y %H-%M-%S')
-				with open(f'{savedGamesDir}/{savedGamesList[i]}', 'r', encoding='utf-8') as saveFile:
+				with open(f'{globals.savedGamesDir}/{savedGamesList[i]}', 'r', encoding='utf-8') as saveFile:
 					lines = saveFile.readlines()
 					dimensions = lines[1].strip().split(',')
 					rows = int(dimensions[0])
 					columns = int(dimensions[1])
 					mines = int(dimensions[2])
+					gameMode = lines[2].strip() if len(lines) > 2 else "normal"
+				
+				modeLabel = "Aleatorio" if gameMode == "random" else "Normal"
+				
 				if "AUTOSAVE" in savedGamesList[i]:
-					print(f'{i+1} -> {dt.strftime("%d/%m/%Y a las %H:%M:%S")} | {rows}x{columns} M={mines} | (AUTO GUARDADO)')
+					print(f'{i+1} -> {dt.strftime("%d/%m/%Y a las %H:%M:%S")} | {rows}x{columns} M={mines} | Modo: {modeLabel} | (AUTO GUARDADO)')
 				else:
-					print(f'{i+1} -> {dt.strftime("%d/%m/%Y a las %H:%M:%S")} | {rows}x{columns} M={mines}')
+					print(f'{i+1} -> {dt.strftime("%d/%m/%Y a las %H:%M:%S")} | {rows}x{columns} M={mines} | Modo: {modeLabel}')
 				validGames.append(i)
 			except:
 				print(f'Archivo no válido: {savedGamesList[i]}')
@@ -140,7 +130,7 @@ def savedGames():
 		menuSel = input("Selecciona opción --> ")
 		
 		if menuSel == "s":
-			player_menu(playerName)
+			player_menu(globals.playerName)
 		elif menuSel == "d":
 			delSel = input("\nNúmero de partida a eliminar --> ")
 			try:
@@ -152,7 +142,7 @@ def savedGames():
 			if check == True:
 				if 0 < delSel <= len(savedGamesList) and (delSel-1) in validGames:
 					print(f"\nEliminando partida: {savedGamesList[delSel-1]}")
-					saveFilePath = savedGamesDir+'/'+savedGamesList[delSel-1]
+					saveFilePath = f'{globals.savedGamesDir}/{savedGamesList[delSel-1]}'
 					try:
 						os.remove(saveFilePath)
 						print("Partida eliminada exitosamente.")
@@ -176,7 +166,7 @@ def savedGames():
 					print(f"Cargando partida: {savedGamesList[menuSel-1]}")
 					sleep(2)
 					loadGame(savedGamesList[menuSel-1])
-					player_menu(playerName)
+					player_menu(globals.playerName)
 				else:
 					savedGames()
 			else:
@@ -184,13 +174,12 @@ def savedGames():
 
 def player_menu(p):
 	"""Página principal del jugador: muestra estadísticas y opciones"""
-	global playerName, headMsg, savedGamesDir
-	from .utils import head
 	from .game import newGame
 
-	playerName = p
+	globals.playerName = p
+	globals.savedGamesDir = f'./Game/players/{globals.playerName}/savedGames'
 
-	playerData_File = f'./Game/players/{playerName}/playerData.txt'
+	playerData_File = f'./Game/players/{globals.playerName}/playerData.txt'
 	try:
 		with open(playerData_File, 'r', encoding='utf-8') as playerData:
 			Data = playerData.readlines()
@@ -208,7 +197,7 @@ def player_menu(p):
 			wins = int(Data[1])
 			defs = int(Data[2])
 
-	headMsg = f"Hola, {playerName}. ¡Bienvenido al Buscaminas!\n"
+	globals.headMsg = f"Hola, {globals.playerName}. ¡Bienvenido al Buscaminas!\n"
 
 	head()
 	print(f'Partidas jugadas: {played}\nPartidas ganadas: {wins}\nPartidas perdidas: {defs}')
@@ -231,39 +220,39 @@ def player_menu(p):
 			check = False
 
 		if check == True:
-			if menuSel == 1 or menuSel == 2:
-				if menuSel == 1:
-					newGame()
-				elif menuSel == 2:
-					savedGames()
-				elif menuSel == 3:
-					file_path = f'./Game/players/{playerName}/playerHistory.txt'
-					try:
-						if platform.system() == "Windows":
-							process = subprocess.run(["notepad.exe", file_path])
-						elif platform.system() == "Darwin":
-							process = subprocess.run(["open", file_path])
-						else:
-							process = subprocess.run(["xdg-open", file_path])
-					except FileNotFoundError:
-						print(f"Error: No se encontró el archivo '{file_path}'.")
-					except subprocess.CalledProcessError:
-						print(f"Error al intentar abrir '{file_path}' con el Bloc de notas.")
-					player_menu(playerName)
+			if menuSel == 1:
+				newGame()
+			elif menuSel == 2:
+				savedGames()
+			elif menuSel == 3:
+				file_path = f'./Game/players/{globals.playerName}/playerHistory.txt'
+				try:
+					if platform.system() == "Windows":
+						subprocess.run(["notepad.exe", file_path])
+					elif platform.system() == "Darwin":
+						subprocess.run(["open", file_path])
+					else:
+						subprocess.run(["xdg-open", file_path])
+				except FileNotFoundError:
+					print(f"Error: No se encontró el archivo '{file_path}'.")
+				except subprocess.CalledProcessError:
+					print(f"Error al intentar abrir '{file_path}'.")
+				player_menu(globals.playerName)
 			elif menuSel == 0:
+				globals.headMsg = f"Hola, {globals.playerName}. ¡Bienvenido al Buscaminas!\n"
 				head()
 				check = input("¿Estás seguro que quieres eliminar el jugador? (S/n) --> ")
 				if check == "S":
 					try:
-						playerDir = f'./Game/players/{playerName}'
+						playerDir = f'./Game/players/{globals.playerName}'
 						shutil.rmtree(playerDir)
 						print(f"Directorio '{playerDir}' eliminado correctamente.")
 						menu()
 					except OSError as e:
 						print(f"Error al eliminar el directorio '{playerDir}': {e}")
 				else:
-					player_menu(playerName)
+					player_menu(globals.playerName)
 			else:
-				player_menu(playerName)
+				player_menu(globals.playerName)
 		else:
-			player_menu(playerName)
+			player_menu(globals.playerName)

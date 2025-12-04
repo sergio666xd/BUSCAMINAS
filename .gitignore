@@ -1,1 +1,4 @@
+saves/
 Game/players/
+__pycache__/
+*.pyc

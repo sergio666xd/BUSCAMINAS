@@ -1,5 +1,6 @@
 import os
 import datetime
+from . import globals
 
 # Variables globales del módulo
 autosaveFile = ""
@@ -7,10 +8,9 @@ played = 0
 
 def deleteAutosave():
 	"""Elimina el archivo de autosave al finalizar la partida"""
-	from . import game
-	from .menus import savedGamesDir
+	global autosaveFile
 	
-	saveFilePath = savedGamesDir+'/'+autosaveFile
+	saveFilePath = f"{globals.savedGamesDir}/{autosaveFile}"
 	try:
 		os.remove(saveFilePath)
 	except FileNotFoundError:
@@ -18,90 +18,100 @@ def deleteAutosave():
 
 def saveGame(autosave):
 	"""Guarda la partida actual en un archivo"""
-	from . import game
-	from .menus import playerName, savedGamesDir
+	global autosaveFile
 
 	try:
-		os.mkdir(savedGamesDir)
+		os.mkdir(globals.savedGamesDir)
 	except FileExistsError:
 		pass
 
 	if autosave == True:
-		saveFilePath = savedGamesDir+'/'+autosaveFile
+		saveFilePath = f"{globals.savedGamesDir}/{autosaveFile}"
 	else:
 		now = datetime.datetime.now()
 		deleteAutosave()
-		saveFileName = f"game_{now.strftime('%d-%m-%Y_%H-%M-%S')}_{playerName}.txt"
-		saveFilePath = os.path.join(savedGamesDir, saveFileName)
+		saveFileName = f"game_{now.strftime('%d-%m-%Y_%H-%M-%S')}_{globals.playerName}_{globals.gameMode}.txt"
+		saveFilePath = f"{globals.savedGamesDir}/{saveFileName}"
 
 	with open(saveFilePath, 'w', encoding='utf-8') as saveFile:
-		saveFile.write(f"{game.startTime.strftime('%d-%m-%Y %H:%M:%S')}\n")
-		saveFile.write(f"{game.gameRows},{game.gameColumns},{game.gameMines}\n")
-		for r in range(game.gameRows):
-			row_data = ','.join(str(cell) for cell in game.Board[r])
+		saveFile.write(f"{globals.startTime.strftime('%d-%m-%Y %H:%M:%S')}\n")
+		saveFile.write(f"{globals.gameRows},{globals.gameColumns},{globals.gameMines}\n")
+		saveFile.write(f"{globals.gameMode}\n")
+		for r in range(globals.gameRows):
+			row_data = ','.join(str(cell) for cell in globals.Board[r])
 			saveFile.write(f"{row_data}\n")
-		for r in range(game.gameRows):
-			row_data = ','.join(str(cell) for cell in game.Mines[r])
+		for r in range(globals.gameRows):
+			row_data = ','.join(str(cell) for cell in globals.Mines[r])
 			saveFile.write(f"{row_data}\n")
-		checked_data = ';'.join(f"{cell[0]},{cell[1]}" for cell in game.cellsChecked)
+		checked_data = ';'.join(f"{cell[0]},{cell[1]}" for cell in globals.cellsChecked)
 		saveFile.write(f"{checked_data}\n")
-		free_data = ';'.join(f"{pos[0]},{pos[1]}" for pos in game.freePositions)
+		free_data = ';'.join(f"{pos[0]},{pos[1]}" for pos in globals.freePositions)
 		saveFile.write(f"{free_data}\n")
 
 def loadGame(saveFileName):
 	"""Carga una partida guardada desde un archivo"""
-	from . import game
-	from .menus import playerName, savedGamesDir
+	global autosaveFile
 
-	saveFilePath = savedGamesDir+'/'+saveFileName
+	saveFilePath = f"{globals.savedGamesDir}/{saveFileName}"
 	if saveFileName.endswith("_AUTOSAVE.txt"):
-		global autosaveFile
 		autosaveFile = saveFileName
 
 	with open(saveFilePath, 'r', encoding='utf-8') as saveFile:
 		lines = saveFile.readlines()
-		game.startTime = datetime.datetime.strptime(lines[0].strip(), '%d-%m-%Y %H:%M:%S')
+		globals.startTime = datetime.datetime.strptime(lines[0].strip(), '%d-%m-%Y %H:%M:%S')
 		dimensions = lines[1].strip().split(',')
-		game.gameRows = int(dimensions[0])
-		game.gameColumns = int(dimensions[1])
-		game.gameMines = int(dimensions[2])
+		globals.gameRows = int(dimensions[0])
+		globals.gameColumns = int(dimensions[1])
+		globals.gameMines = int(dimensions[2])
 		
-		game.Board = []
-		for r in range(game.gameRows):
-			row_data = lines[2 + r].strip().split(',')
-			game.Board.append([cell if cell in ["■", "▣", "□", "⊠"] else int(cell) for cell in row_data])
+		# Detectar si el archivo tiene gameMode (nueva versión)
+		lineOffset = 2
+		if len(lines) > 2 and lines[2].strip() in ["normal", "random"]:
+			globals.gameMode = lines[2].strip()
+			lineOffset = 3
+		else:
+			globals.gameMode = "normal"
+			lineOffset = 2
 		
-		game.Mines = []
-		for r in range(game.gameRows):
-			row_data = lines[2 + game.gameRows + r].strip().split(',')
-			game.Mines.append([int(cell) for cell in row_data])
+		globals.Board = []
+		for r in range(globals.gameRows):
+			row_data = lines[lineOffset + r].strip().split(',')
+			globals.Board.append([cell if cell in ["■", "▣", "□", "⊠"] else int(cell) for cell in row_data])
 		
-		game.cellsChecked = []
-		checked_data = lines[2 + 2 * game.gameRows].strip().split(';')
+		globals.Mines = []
+		for r in range(globals.gameRows):
+			row_data = lines[lineOffset + globals.gameRows + r].strip().split(',')
+			globals.Mines.append([int(cell) for cell in row_data])
+		
+		globals.cellsChecked = []
+		checked_data = lines[lineOffset + 2 * globals.gameRows].strip().split(';')
 		for cell in checked_data:
 			if cell:
-				r, c = map(int, cell.split(','))
-				game.cellsChecked.append([r, c])
+				parts = cell.split(',')
+				if len(parts) == 2:
+					r, c = map(int, parts)
+					globals.cellsChecked.append([r, c])
 		
-		game.freePositions = []
-		free_data = lines[3 + 2 * game.gameRows].strip().split(';')
+		globals.freePositions = []
+		free_data = lines[lineOffset + 2 * globals.gameRows + 1].strip().split(';')
 		for pos in free_data:
 			if pos:
-				r, c = map(int, pos.split(','))
-				game.freePositions.append((r, c))
+				parts = pos.split(',')
+				if len(parts) == 2:
+					r, c = map(int, parts)
+					globals.freePositions.append((r, c))
 
-	game.headMsg = f"BUSCAMINAS | Jugador: {playerName}\n\nTablero {game.gameRows}x{game.gameColumns} | {game.gameMines}\nModo: Descubrir"
-	game.onGame = True
-	game.selMode = True
-	game.gameStatus = 2
-	game.countMines = game.gameMines
+	globals.headMsg = f"BUSCAMINAS | Jugador: {globals.playerName}\n\nTablero {globals.gameRows}x{globals.gameColumns} | {globals.gameMines}\nModo: Descubrir"
+	globals.onGame = True
+	globals.selMode = True
+	globals.gameStatus = 2
+	globals.countMines = globals.gameMines
 
-	game.game()
+	from .game import game
+	game()
 
 def save():
 	"""Guarda la partida automáticamente"""
-	from . import game
-	from .menus import playerName
 	global autosaveFile
 
 	now = datetime.datetime.now()
@@ -109,33 +119,30 @@ def save():
 		deleteAutosave()
 	except:
 		pass
-	autosaveFile = f"game_{now.strftime('%d-%m-%Y_%H-%M-%S')}_{playerName}_AUTOSAVE.txt"
+	autosaveFile = f"game_{now.strftime('%d-%m-%Y_%H-%M-%S')}_{globals.playerName}_{globals.gameMode}_AUTOSAVE.txt"
 	saveGame(True)
 
 def historyNew():
 	"""Añade el tablero final al archivo playerHistory.txt"""
-	from . import game
-	from .menus import playerName
-	from .board import gameBoard
 	global played
+	from .board import gameBoard
 
 	now = datetime.datetime.now()
 	lines = gameBoard(0, 1)
-	with open(f'./Game/players/{playerName}/playerHistory.txt', 'a', encoding='utf-8') as playerHistory:
+	with open(f'./Game/players/{globals.playerName}/playerHistory.txt', 'a', encoding='utf-8') as playerHistory:
 		playerHistory.write(f"\n-----------------------------------------------------\n")
-		playerHistory.write(f"\n--- Partida N°{played} ({game.finishStatus}) ---\n")
-		playerHistory.write(f'\n-- Partida Iniciada el {game.startTime.strftime("%d/%m/%Y a las %H:%M:%S")} --\n')
-		playerHistory.write(f"\nTablero: {game.gameRows}x{game.gameColumns} | Minas: {game.gameMines}\n\n")
+		playerHistory.write(f"\n--- Partida N°{played} ({globals.finishStatus}) ---\n")
+		playerHistory.write(f'\n-- Partida Iniciada el {globals.startTime.strftime("%d/%m/%Y a las %H:%M:%S")} --\n')
+		playerHistory.write(f"\nTablero: {globals.gameRows}x{globals.gameColumns} | Minas: {globals.gameMines}\n\n")
 		for line in lines:
 			playerHistory.write(f"{line}\n")
 		playerHistory.write(f'\n-- Partida Finalizada el {now.strftime("%d/%m/%Y a las %H:%M:%S")} --\n')
 
 def newScore(s):
 	"""Actualiza la puntuación en playerData.txt"""
-	from .menus import playerName
 	global played
 
-	playerData_File = f'./Game/players/{playerName}/playerData.txt'
+	playerData_File = f'./Game/players/{globals.playerName}/playerData.txt'
 	with open(playerData_File, 'r', encoding='utf-8') as playerData:
 		Data = playerData.readlines()
 		played = int(Data[0]) + 1

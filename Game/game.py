@@ -1,44 +1,34 @@
 import datetime
+import random
 from time import sleep
-
-# Variables globales del módulo
-headMsg = ""
-playerName = ""
-gameRows = 0
-gameColumns = 0
-gameMines = 0
-Board = []
-Mines = []
-cellsChecked = []
-freePositions = []
-T = 0
-countMines = 0
-startTime = None
-onGame = False
-selMode = True
-selRow = 0
-selColumn = 0
-gameStatus = 0
-finishStatus = ""
+from . import globals
+from .utils import head, gameSel_Check
 
 def cellSelector():
 	"""Controla la entrada del usuario para seleccionar casillas o cambiar de modo"""
-	global onGame, selMode, selRow, selColumn, headMsg, countMines, gameStatus, playerName, gameRows, gameColumns
-	from .utils import head, gameSel_Check
 	from .save import saveGame
+	from .board import gameBoard
 
-	if gameStatus == 3:
-		selRow = input("\nFila --> ")
+	if globals.gameStatus == 3:
+		if globals.gameMode == "random":
+			return cellSelector_Random()
+		else:
+			globals.selRow = input("\nFila --> ")
 	else:
-		print("\nOpciones: m = Cambiar modo | s = Guardar | q = Salir")
-		selRow = input("Opción o Fila --> ")
+		if globals.gameMode == "random":
+			print("\nOpciones: m = Cambiar modo | s = Guardar | q = Salir | r = Generar casilla | i = Ingresar casilla")
+			selRow = input("Opción o Acción --> ")
+		else:
+			print("\nOpciones: m = Cambiar modo | s = Guardar | q = Salir")
+			selRow = input("Opción o Fila --> ")
+		
 		if selRow == "q":
 			saveAsk = input("\n¿Guardar partida antes de salir? (S/n) --> ")
 			if saveAsk.lower() == "s":
 				print("\nGuardando partida...")
 				saveGame(False)
 				sleep(2)
-			onGame = False
+			globals.onGame = False
 			return 0
 		elif selRow == "s":
 			saveAsk = input("\n¿Guardar partida? (S/n) --> ")
@@ -48,112 +38,180 @@ def cellSelector():
 				sleep(1)
 			return 1
 		elif selRow == "m":
-			if selMode == True:
-				selMode = False
-				headMsg = f"BUSCAMINAS | Jugador: {playerName}\n\nTablero {gameRows}x{gameColumns} | {countMines}\nModo: Marcar"
+			if globals.selMode == True:
+				globals.selMode = False
+				globals.headMsg = f"BUSCAMINAS | Jugador: {globals.playerName}\n\nTablero {globals.gameRows}x{globals.gameColumns} | {globals.countMines}\nModo: Marcar"
 				return 1
 			else:
-				selMode = True
-				headMsg = f"BUSCAMINAS | Jugador: {playerName}\n\nTablero {gameRows}x{gameColumns} | {countMines}\nModo: Descubrir"
+				globals.selMode = True
+				globals.headMsg = f"BUSCAMINAS | Jugador: {globals.playerName}\n\nTablero {globals.gameRows}x{globals.gameColumns} | {globals.countMines}\nModo: Descubrir"
 				return 1
+		elif globals.gameMode == "random" and selRow == "r":
+			return cellSelector_Random()
+		elif globals.gameMode == "random" and selRow == "i":
+			globals.selRow = input("\nFila --> ")
+		else:
+			globals.selRow = selRow
 
-	while gameSel_Check(selRow, gameRows):
+	while gameSel_Check(globals.selRow, globals.gameRows):
 		head()
-		from .board import gameBoard
 		gameBoard(0, 0)
-		print(f"\nERROR! Fila incorrecta (1-{gameRows})\n")
-		selRow = input("Fila --> ")
-	selRow = int(selRow)
+		print(f"\nERROR! Fila incorrecta (1-{globals.gameRows})\n")
+		globals.selRow = input("Fila --> ")
+	globals.selRow = int(globals.selRow)
 
-	selColumn = input("Columna --> ")
-	while gameSel_Check(selColumn, gameColumns):
+	globals.selColumn = input("Columna --> ")
+	while gameSel_Check(globals.selColumn, globals.gameColumns):
 		head()
-		from .board import gameBoard
 		gameBoard(0, 0)
-		print(f"\nFila: {selRow}")
-		print(f"\nERROR! Columna incorrecta (1-{gameColumns})\n")
-		selColumn = input("Columna --> ")
-	selColumn = int(selColumn)
+		print(f"\nFila: {globals.selRow}")
+		print(f"\nERROR! Columna incorrecta (1-{globals.gameColumns})\n")
+		globals.selColumn = input("Columna --> ")
+	globals.selColumn = int(globals.selColumn)
 
 	return 2
 
+def cellSelector_Random():
+	"""Genera una casilla aleatoria válida y pregunta si desea jugar en ella"""
+	from .board import gameBoard
+
+	# Generar casilla aleatoria válida
+	validCells = [(r+1, c+1) for r in range(globals.gameRows) for c in range(globals.gameColumns) if globals.Board[r][c] == "■"]
+	
+	if validCells:
+		globals.selRow, globals.selColumn = random.choice(validCells)
+		head()
+		gameBoard(0, 0)
+		print(f"\nCasilla generada aleatoriamente: Fila {globals.selRow}, Columna {globals.selColumn}")
+		print("\n¿Deseas jugar en esta casilla?")
+		print("1 -> Sí, jugar en esta casilla")
+		print("2 -> No, ingresar una casilla manualmente")
+		print("3 -> Generar otra casilla\n")
+		
+		response = input("Selecciona opción --> ")
+		
+		if response == "1":
+			return 2
+		elif response == "2":
+			globals.selRow = input("\nFila --> ")
+			while gameSel_Check(globals.selRow, globals.gameRows):
+				head()
+				gameBoard(0, 0)
+				print(f"\nERROR! Fila incorrecta (1-{globals.gameRows})\n")
+				globals.selRow = input("Fila --> ")
+			globals.selRow = int(globals.selRow)
+
+			globals.selColumn = input("Columna --> ")
+			while gameSel_Check(globals.selColumn, globals.gameColumns):
+				head()
+				gameBoard(0, 0)
+				print(f"\nFila: {globals.selRow}")
+				print(f"\nERROR! Columna incorrecta (1-{globals.gameColumns})\n")
+				globals.selColumn = input("Columna --> ")
+			globals.selColumn = int(globals.selColumn)
+			return 2
+		elif response == "3":
+			return cellSelector_Random()
+		else:
+			head()
+			gameBoard(0, 0)
+			return cellSelector_Random()
+	else:
+		head()
+		gameBoard(0, 0)
+		print("\nNo hay casillas válidas disponibles.\n")
+		return cellSelector_Random()
+
 def newGame():
 	"""Inicia una nueva partida, solicita parámetros y valida entradas"""
-	global headMsg, gameRows, gameColumns, gameMines, playerName, cellsChecked, Board, selMode, countMines, startTime, Mines, onGame, gameStatus
-	from .utils import head, NumTry, minesCheck
+	from .utils import NumTry, minesCheck
 	from .board import gameBoard_New, gameMines_New, gameCell_Check, gameBoard
 
 	head()
-	if 'errBoard' in globals():
-		print(errBoard)
-		del errBoard
 
-	gameRows = input("Ingresa número de filas --> ")
+	globals.gameRows = input("Ingresa número de filas --> ")
 
-	while NumTry(gameRows):
+	while NumTry(globals.gameRows):
 		head()
 		print("ERROR! El número de filas debe ser un número entero mayor que cero\n")
-		gameRows = int(input("Ingresa número de filas --> "))
+		globals.gameRows = int(input("Ingresa número de filas --> "))
 
-	gameRows = int(gameRows)
+	globals.gameRows = int(globals.gameRows)
 
 	head()
-	print(f"Número de filas ingresado: {gameRows}\n")
-	gameColumns = input("Ingresa número de columnas --> ")
+	print(f"Número de filas ingresado: {globals.gameRows}\n")
+	globals.gameColumns = input("Ingresa número de columnas --> ")
 
-	while NumTry(gameColumns):
+	while NumTry(globals.gameColumns):
 		head()
-		print(f"Número de filas ingresado: {gameRows}\n")
+		print(f"Número de filas ingresado: {globals.gameRows}\n")
 		print("ERROR! El número de columnas debe ser un número entero mayor que cero\n")
-		gameColumns = input("Ingresa número de columnas --> ")
+		globals.gameColumns = input("Ingresa número de columnas --> ")
 
-	gameColumns = int(gameColumns)
+	globals.gameColumns = int(globals.gameColumns)
 
 	head()
-	print(f"Número de filas ingresado: {gameRows} | Número de columnas ingresado: {gameColumns}\n")
+	print(f"Número de filas ingresado: {globals.gameRows} | Número de columnas ingresado: {globals.gameColumns}\n")
 
-	if gameRows * gameColumns <= 9:
-		errBoard = "¡ADVERTENCIA! El tamaño del tablero es muy pequeño, lo que puede afectar la jugabilidad.\nTamaño mínimo recomendado: 4x4 (16 casillas)\n"
+	if globals.gameRows * globals.gameColumns <= 9:
+		globals.headMsg = "¡ADVERTENCIA! El tamaño del tablero es muy pequeño, lo que puede afectar la jugabilidad.\nTamaño mínimo recomendado: 4x4 (16 casillas)\n"
+		head()
+		input("Presiona Enter para volver...")
 		newGame()
 	else:
-		gameMines = input("Ingresa número de Minas --> ")
+		globals.gameMines = input("Ingresa número de Minas --> ")
 
-		while minesCheck(gameMines):
+		while minesCheck(globals.gameMines):
 			head()
-			print(f"Número de filas ingresado: {gameRows}\n")
+			print(f"Número de filas ingresado: {globals.gameRows}\n")
 			print("ERROR! El número de minas debe ser un número entero mayor que cero\n")
-			gameMines = input("Ingresa número de Minas --> ")
+			globals.gameMines = input("Ingresa número de Minas --> ")
 
-		gameMines = int(gameMines)
+		globals.gameMines = int(globals.gameMines)
 
-		headMsg = f"BUSCAMINAS | Jugador: {playerName}\n\nTablero {gameRows}x{gameColumns} | Minas Restantes: {gameMines}\nModo: Descubrir"
+		# Seleccionar modo de juego
+		head()
+		print("-- Selecciona modo de juego --\n")
+		print("1 -> Modo Normal (seleccionar casillas manualmente)")
+		print("2 -> Modo Aleatorio (con opción de generar casillas aleatoriamente)\n")
+		modeSelection = input("Selecciona modo --> ")
+		
+		while modeSelection not in ["1", "2"]:
+			head()
+			print("-- Selecciona modo de juego --\n")
+			print("1 -> Modo Normal (seleccionar casillas manualmente)")
+			print("2 -> Modo Aleatorio (con opción de generar casillas aleatoriamente)\n")
+			print("ERROR! Selecciona una opción válida\n")
+			modeSelection = input("Selecciona modo --> ")
+		
+		globals.gameMode = "normal" if modeSelection == "1" else "random"
 
-		Board = gameBoard_New()
+		globals.headMsg = f"BUSCAMINAS | Jugador: {globals.playerName}\n\nTablero {globals.gameRows}x{globals.gameColumns} | Minas Restantes: {globals.gameMines}\nModo: Descubrir"
+
+		globals.Board = gameBoard_New()
 
 		head()
 		gameBoard(0, 0)
 
-		cellsChecked = []
-		countMines = gameMines
+		globals.cellsChecked = []
+		globals.countMines = globals.gameMines
 
-		onGame = True
-		selMode = True
+		globals.onGame = True
+		globals.selMode = True
 
-		gameStatus = 3
-		gameStatus = cellSelector()
+		globals.gameStatus = 3
+		globals.gameStatus = cellSelector()
 
-		Mines = gameMines_New(selRow, selColumn)
-		T = 1
-		gameCell_Check(selRow, selColumn)
+		globals.Mines = gameMines_New(globals.selRow, globals.selColumn)
+		globals.T = 1
+		gameCell_Check(globals.selRow, globals.selColumn)
 
-		startTime = datetime.datetime.now()
+		globals.startTime = datetime.datetime.now()
 
 		game()
 
 def game():
 	"""Lógica principal del juego: ciclo de turnos, control de estado y condiciones de victoria/derrota"""
-	global cellsChecked, Board, headMsg, gameMines, selMode, T, countMines, startTime, Mines, onGame, playerName, gameStatus, freePositions, finishStatus
-	from .utils import head
 	from .board import gameBoard, gameCell_Check
 	from .save import save, deleteAutosave, historyNew, newScore
 
@@ -161,89 +219,91 @@ def game():
 
 	finishMsg = "\n-- Saliendo --\n"
 
-	while onGame == True:
+	while globals.onGame == True:
 		head()
+		from .board import gameBoard
 		gameBoard(0, 0)
-		if playerName == "admin":
+		if globals.playerName == "admin":
 			print("")
-			print(cellsChecked)
+			print(globals.cellsChecked)
 			print("")
 			gameBoard(1, 0)
 			print("")
 		
-		gameStatus = cellSelector()
+		globals.gameStatus = cellSelector()
 		save()
-		if gameStatus == 0:
+		if globals.gameStatus == 0:
 			finishMsg = "\n-- Saliendo --\n"
 			break
-		elif gameStatus == 1:
+		elif globals.gameStatus == 1:
 			continue
-		elif gameStatus == 2:
-			if selMode == True:
-				if Mines[selRow-1][selColumn-1] == 0:
-					T = 1
-					gameCell_Check(selRow, selColumn)
+		elif globals.gameStatus == 2:
+			if globals.selMode == True:
+				if globals.Mines[globals.selRow-1][globals.selColumn-1] == 0:
+					globals.T = 1
+					gameCell_Check(globals.selRow, globals.selColumn)
 				else:
-					Board[selRow-1][selColumn-1] = "⊠"
+					globals.Board[globals.selRow-1][globals.selColumn-1] = "⊠"
 					head()
 					gameBoard(0, 0)
 					sleep(0.3)
-					for i in range(gameRows):
-						for c in range(gameColumns):
-							if Mines[i][c] == 1 and Board[i][c] == "■":
-								Board[i][c] = "⊠"
+					for i in range(globals.gameRows):
+						for c in range(globals.gameColumns):
+							if globals.Mines[i][c] == 1 and globals.Board[i][c] == "■":
+								globals.Board[i][c] = "⊠"
 								head()
 								gameBoard(0, 0)
 								sleep(0.3)
-							elif Mines[i][c] == 0 and Board[i][c] == "▣":
-								Board[i][c] = "⊠"
+							elif globals.Mines[i][c] == 0 and globals.Board[i][c] == "▣":
+								globals.Board[i][c] = "⊠"
 								head()
 								gameBoard(0, 0) 
 								sleep(0.3)
 					finishMsg = "\nPERDISTE :(\n"
-					finishStatus = "Perdida"
+					globals.finishStatus = "Perdida"
 					print(finishMsg)
 					newScore("d")
 					historyNew()
-					onGame = False
+					globals.onGame = False
 			else:
-				if Board[selRow-1][selColumn-1] == "■":
-					Board[selRow-1][selColumn-1] = "▣"
-					countMines -= 1
-					headMsg = f"BUSCAMINAS | Jugador: {playerName}\n\nTablero {gameRows}x{gameColumns} | {countMines}\nModo: Marcar"
-				elif Board[selRow-1][selColumn-1] == "▣":
-					Board[selRow-1][selColumn-1] = "■"
-					countMines += 1
-					headMsg = f"BUSCAMINAS | Jugador: {playerName}\n\nTablero {gameRows}x{gameColumns} | {countMines}\nModo: Marcar"
+				if globals.Board[globals.selRow-1][globals.selColumn-1] == "■":
+					globals.Board[globals.selRow-1][globals.selColumn-1] = "▣"
+					globals.countMines -= 1
+					globals.headMsg = f"BUSCAMINAS | Jugador: {globals.playerName}\n\nTablero {globals.gameRows}x{globals.gameColumns} | {globals.countMines}\nModo: Marcar"
+				elif globals.Board[globals.selRow-1][globals.selColumn-1] == "▣":
+					globals.Board[globals.selRow-1][globals.selColumn-1] = "■"
+					globals.countMines += 1
+					globals.headMsg = f"BUSCAMINAS | Jugador: {globals.playerName}\n\nTablero {globals.gameRows}x{globals.gameColumns} | {globals.countMines}\nModo: Marcar"
 				else:
 					continue
-				if countMines == 0:
+				if globals.countMines == 0:
 					checkMines = 0
-					for r in range(gameRows):
-						for c in range(gameColumns):
-							if Board[r][c] == "▣" and Mines[r][c] == 1:
+					for r in range(globals.gameRows):
+						for c in range(globals.gameColumns):
+							if globals.Board[r][c] == "▣" and globals.Mines[r][c] == 1:
 								checkMines += 1
-		if freePositions == []:
-			for i in range(gameRows):
-				for c in range(gameColumns):
-					if Board[i][c] == "▣":
-						Board[i][c] = "■"
+		if globals.freePositions == []:
+			for i in range(globals.gameRows):
+				for c in range(globals.gameColumns):
+					if globals.Board[i][c] == "▣":
+						globals.Board[i][c] = "■"
 						head()
 						gameBoard(0, 0)
 						sleep(0.3)
 			finishMsg = "\n¡GANASTE!\n"
-			finishStatus = "Ganada"
+			globals.finishStatus = "Ganada"
 			print(finishMsg)
 			newScore("w")
 			historyNew()
-			onGame = False
+			globals.onGame = False
 
 	head()
+	from .board import gameBoard
 	gameBoard(0, 0)
 
-	if playerName == "admin":
+	if globals.playerName == "admin":
 		print("")
-		print(cellsChecked)
+		print(globals.cellsChecked)
 		print("")
 		gameBoard(1, 0)
 		print("")
@@ -252,4 +312,4 @@ def game():
 	deleteAutosave()
 	sleep(3)
 	from .menus import player_menu
-	player_menu(playerName)
+	player_menu(globals.playerName)

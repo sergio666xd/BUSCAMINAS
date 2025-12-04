@@ -1,4 +1,5 @@
 import os
+from . import globals
 
 def clear():
 	"""Despeja la consola"""
@@ -10,7 +11,7 @@ def clear():
 def head():
 	"""Encabezado"""
 	clear()
-	print(headMsg)
+	print(globals.headMsg)
 
 def NumTry(N):
 	"""Evaluar si es posible convertir el input str en un int"""
@@ -24,7 +25,7 @@ def minesCheck(N):
 	"""Evaluar si la cantidad de minas está en el rango permitido"""
 	if NumTry(N) == False:
 		N = int(N)
-		T = gameRows * gameColumns
+		T = globals.gameRows * globals.gameColumns
 		if 0 < N <= T:
 			return False
 		else:
